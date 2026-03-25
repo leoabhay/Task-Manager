@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { BoardData, Card, Column, MoveCardPayload } from '../types';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.REACT_APP_API_URL || '/api',
   timeout: 10_000,
   headers: { 'Content-Type': 'application/json' },
 });
