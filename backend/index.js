@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const helmet   = require('helmet');
 const morgan   = require('morgan');
 const path     = require('path');
-
 const boardRoutes  = require('./routes/boards');
 const cardRoutes   = require('./routes/cards');
 const columnRoutes = require('./routes/columns');
@@ -24,13 +23,28 @@ app.use('/api/cards',   cardRoutes);
 app.use('/api/columns', columnRoutes);
 app.get('/health', (_req, res) => res.json({ status: 'ok', environment: process.env.NODE_ENV }));
 
+// Health check
+app.get('/', (_req, res) => res.json({ status: 'ok', environment: process.env.NODE_ENV }));
+
 // Static Serving (Production)
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, '../frontend/build');
-  app.use(express.static(buildPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(buildPath, 'index.html'));
-  });
+  const fs = require('fs');
+  if (fs.existsSync(buildPath)) {
+    app.use(express.static(buildPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(buildPath, 'index.html'));
+    });
+  } else {
+    // API-only mode fallback
+    app.get('*', (req, res) => {
+      if (req.path.startsWith('/api/')) {
+        res.status(404).json({ message: 'API Route not found' });
+      } else {
+        res.json({ message: 'API is running. Connect your frontend to see this app.' });
+      }
+    });
+  }
 } else {
   // Default fallback for development
   app.use((_req, res) => res.status(404).json({ message: 'Route not found' }));
