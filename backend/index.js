@@ -14,7 +14,25 @@ const app = express();
 // Security and Logging
 app.use(helmet({ contentSecurityPolicy: false })); // CSP off for simplicity in MERN
 app.use(morgan('dev'));
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.CLIENT_ORIGIN
+].filter(Boolean).map(url => url.replace(/\/$/, ""));
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    // Remove trailing slash from origin for reliable matching
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // API Routes
@@ -59,9 +77,14 @@ app.use((err, _req, res, _next) => {
 const PORT        = process.env.PORT        || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kanban';
 
+// Database Connection
 mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB connected');
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-  })
-  .catch(err => { console.error('MongoDB error:', err.message); process.exit(1); });
+  .then(() => console.log('MongoDB connected successfully'))
+  .catch(err => {
+    console.error('MongoDB connection error:', err.message);
+  });
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
